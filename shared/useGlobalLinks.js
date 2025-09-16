@@ -1,6 +1,6 @@
 /**
- * Hook personalizado para obtener enlaces por grupo desde landing_phones
- * Específico para 1xclub-wsp (grupo: 1xclub-wsp)
+ * Hook personalizado para obtener enlaces globales desde Supabase
+ * Usado por todas las webs para mantener enlaces sincronizados
  */
 
 import { useState, useEffect } from 'react';
@@ -12,12 +12,9 @@ const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'your-anon-key';
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-// Grupo específico para este proyecto
-const REPOSITORY_GROUP = '1xclub-wsp';
-
 // Enlaces por defecto como fallback
 const DEFAULT_LINKS = {
-  whatsapp_link: 'https://wa.me/5491123456790',
+  whatsapp_link: 'https://wa.link/iqlqj4',
   register_title: 'Registrate gratis y pedi 2000 fichas para probar'
 };
 
@@ -25,46 +22,32 @@ export const useGlobalLinks = () => {
   const [links, setLinks] = useState(DEFAULT_LINKS);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [groupInfo, setGroupInfo] = useState(null);
 
   const fetchLinks = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      // Obtener enlaces del grupo desde landing_phones
+      // Intentar obtener enlaces desde Supabase
       const { data, error: supabaseError } = await supabase
-        .from('landing_phones')
-        .select('whatsapp_link, description, landing_number, is_active, updated_at')
-        .eq('repository_group', REPOSITORY_GROUP)
-        .eq('is_active', true)
+        .from('global_link')
+        .select('whatsapp_link, register_title, updated_at')
         .order('updated_at', { ascending: false })
-        .limit(1);
+        .limit(1)
+        .single();
 
       if (supabaseError) {
         console.warn('Error al obtener enlaces desde Supabase:', supabaseError.message);
-        console.log('Usando enlaces por defecto para grupo:', REPOSITORY_GROUP);
+        console.log('Usando enlaces por defecto');
         setLinks(DEFAULT_LINKS);
-      } else if (data && data.length > 0) {
-        const linkData = data[0];
-        console.log('Enlaces obtenidos desde Supabase para grupo', REPOSITORY_GROUP, ':', linkData);
+      } else if (data) {
+        console.log('Enlaces obtenidos desde Supabase:', data);
         setLinks({
-          whatsapp_link: linkData.whatsapp_link || DEFAULT_LINKS.whatsapp_link,
-          register_title: DEFAULT_LINKS.register_title
+          whatsapp_link: data.whatsapp_link || DEFAULT_LINKS.whatsapp_link,
+          register_title: data.register_title || DEFAULT_LINKS.register_title
         });
-        
-        // Obtener información adicional del grupo
-        const { data: groupData } = await supabase
-          .from('landing_phones_by_group')
-          .select('*')
-          .eq('repository_group', REPOSITORY_GROUP)
-          .single();
-          
-        if (groupData) {
-          setGroupInfo(groupData);
-        }
       } else {
-        console.log('No se encontraron enlaces activos para el grupo:', REPOSITORY_GROUP);
+        console.log('No se encontraron enlaces, usando por defecto');
         setLinks(DEFAULT_LINKS);
       }
     } catch (err) {
@@ -79,19 +62,18 @@ export const useGlobalLinks = () => {
   useEffect(() => {
     fetchLinks();
 
-    // Suscribirse a cambios en tiempo real para el grupo específico
+    // Suscribirse a cambios en tiempo real
     const subscription = supabase
-      .channel(`landing_phones_changes_${REPOSITORY_GROUP}`)
+      .channel('global_link_changes')
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
-          table: 'landing_phones',
-          filter: `repository_group=eq.${REPOSITORY_GROUP}`
+          table: 'global_link'
         },
         (payload) => {
-          console.log('Enlaces actualizados en tiempo real para grupo', REPOSITORY_GROUP, ':', payload);
+          console.log('Enlaces actualizados en tiempo real:', payload);
           fetchLinks();
         }
       )
@@ -107,7 +89,6 @@ export const useGlobalLinks = () => {
     links,
     loading,
     error,
-    groupInfo,
     refetch: fetchLinks
   };
 };
