@@ -11,7 +11,7 @@ import { useLandingPhone } from '@shared/useLandingPhone';
 
 
 function App() {
-  const { phoneData, loading } = useLandingPhone(2);
+  const { phoneData, loading } = useLandingPhone();
   const [showPopup, setShowPopup] = useState(false);
 
 
