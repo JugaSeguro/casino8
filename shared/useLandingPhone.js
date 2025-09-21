@@ -53,8 +53,8 @@ export const useLandingPhone = (landingNumber) => {
       setError(null);
 
       // Validar número de landing
-      if (!landingNumber || landingNumber < 1 || landingNumber > 10) {
-        console.warn('Número de landing inválido:', landingNumber);
+      if (!finalLandingNumber || finalLandingNumber < 1 || finalLandingNumber > 10) {
+        console.warn('Número de landing inválido:', finalLandingNumber);
         setPhoneData(DEFAULT_PHONE);
         return;
       }
@@ -63,16 +63,16 @@ export const useLandingPhone = (landingNumber) => {
       const { data, error: supabaseError } = await supabase
         .from('landing_phones')
         .select('whatsapp_link, description, is_active, individual_title, individual_whatsapp_link, use_individual_settings')
-        .eq('landing_number', landingNumber)
+        .eq('landing_number', finalLandingNumber)
         .eq('is_active', true)
         .single();
 
       if (supabaseError) {
-        console.warn(`Error al obtener número para landing ${landingNumber}:`, supabaseError.message);
+        console.warn(`Error al obtener número para landing ${finalLandingNumber}:`, supabaseError.message);
         console.log('Usando número por defecto');
         setPhoneData(DEFAULT_PHONE);
       } else if (data) {
-        console.log(`Número obtenido para landing ${landingNumber}:`, data);
+        console.log(`Número obtenido para landing ${finalLandingNumber}:`, data);
         
         // Decidir si usar configuración individual o por grupos
         const useIndividualWhatsApp = data.use_individual_settings && data.individual_whatsapp_link;
